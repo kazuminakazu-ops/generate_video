@@ -10,6 +10,7 @@ import urllib.request
 import urllib.parse
 import binascii # Base64 에러 처리를 위해 import
 import subprocess
+import shutil
 import time
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 server_address = os.getenv('SERVER_ADDRESS', '127.0.0.1')
 client_id = str(uuid.uuid4())
+INPUT_DIR = "/ComfyUI/input"
 def to_nearest_multiple_of_16(value):
     """주어진 값을 가장 가까운 16의 배수로 보정, 최소 16 보장"""
     try:
@@ -38,7 +40,11 @@ def process_input(input_data, temp_dir, output_filename, input_type):
         # URL인 경우 다운로드
         logger.info(f"🌐 URL 입력 처리: {input_data}")
         os.makedirs(temp_dir, exist_ok=True)
-        file_path = os.path.abspath(os.path.join(temp_dir, output_filename))
+        ext = os.path.splitext(urllib.parse.urlparse(input_data).path)[1].lower()
+        if ext not in (".png", ".jpg", ".jpeg", ".webp"):
+            ext = ".jpg"
+        filename = os.path.splitext(output_filename)[0] + ext
+        file_path = os.path.abspath(os.path.join(temp_dir, filename))
         return download_file_from_url(input_data, file_path)
     elif input_type == "base64":
         # Base64인 경우 디코딩하여 저장
@@ -176,7 +182,7 @@ def handler(job):
     job_input = job.get("input", {})
 
     logger.info(f"Received job input: {job_input}")
-    task_id = f"task_{uuid.uuid4()}"
+    task_id = os.path.join(INPUT_DIR, f"task_{uuid.uuid4()}")
 
     # 이미지 입력 처리 (image_path, image_url, image_base64 중 하나만 사용)
     image_path = None
@@ -188,7 +194,13 @@ def handler(job):
         image_path = process_input(job_input["image_base64"], task_id, "input_image.jpg", "base64")
     else:
         # 기본값 사용
-        image_path = "/example_image.png"
+        try:
+            os.makedirs(task_id, exist_ok=True)
+            shutil.copy("/example_image.png", os.path.join(task_id, "input_image.png"))
+            image_path = os.path.join(task_id, "input_image.png")
+        except Exception as e:
+            logger.warning(f"example image copy failed: {e}")
+            image_path = "/example_image.png"
         logger.info("기본 이미지 파일을 사용합니다: /example_image.png")
 
     # 엔드 이미지 입력 처리 (end_image_path, end_image_url, end_image_base64 중 하나만 사용)
