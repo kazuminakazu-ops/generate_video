@@ -70,6 +70,34 @@ def download_file_from_url(url, output_path):
         raise Exception(f"다운로드 중 오류 발생: {e}")
 
 
+LORA_LOCAL_DIR = "/ComfyUI/models/loras"
+
+def resolve_lora(value):
+    """LoRA指定がURLまたはhf:記法ならローカルへダウンロードし、ファイル名だけを返す。ファイル名ならそのまま返す。"""
+    if not value:
+        return value
+    url = None
+    if value.startswith("http://") or value.startswith("https://"):
+        url = value
+    elif value.startswith("hf:"):
+        rest = value[3:]
+        parts = rest.split("/", 2)
+        if len(parts) == 3:
+            repo = parts[0] + "/" + parts[1]
+            filepath = parts[2]
+            url = f"https://huggingface.co/{repo}/resolve/main/{filepath}"
+    if url is None:
+        return value
+    filename = os.path.basename(urllib.parse.urlparse(url).path)
+    dest = os.path.join(LORA_LOCAL_DIR, filename)
+    if os.path.exists(dest) and os.path.getsize(dest) > 0:
+        logger.info(f"LoRA cache hit: {filename}")
+        return filename
+    os.makedirs(LORA_LOCAL_DIR, exist_ok=True)
+    download_file_from_url(url, dest)
+    logger.info(f"LoRA downloaded: {url} -> {dest}")
+    return filename
+
 def save_base64_to_file(base64_data, temp_dir, output_filename):
     """Base64 데이터를 파일로 저장하는 함수"""
     try:
@@ -234,8 +262,8 @@ def handler(job):
         # 입력받은 LoRA pairs 적용 (lora_1부터 시작)
         for i, lora_pair in enumerate(lora_pairs):
             if i < 4:  # 최대 4개까지만
-                lora_high = lora_pair.get("high")
-                lora_low = lora_pair.get("low")
+                lora_high = resolve_lora(lora_pair.get("high"))
+                lora_low = resolve_lora(lora_pair.get("low"))
                 lora_high_weight = lora_pair.get("high_weight", 1.0)
                 lora_low_weight = lora_pair.get("low_weight", 1.0)
                 
