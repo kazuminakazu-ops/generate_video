@@ -107,7 +107,7 @@
         0
       ],
       "upscale_method": "lanczos",
-      "keep_proportion": "crop",
+      "keep_proportion": "pad",
       "pad_color": "0, 0, 0",
       "crop_position": "center",
       "divisible_by": 2,
