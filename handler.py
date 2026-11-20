@@ -230,6 +230,12 @@ def handler(job):
     length = job_input.get("length", 81)
     steps = job_input.get("steps", 10)
 
+        # フレームレート設定 - 動画保存ノード(131: VHS_VideoCombine)のframe_rateへ適用
+    fps = job_input.get("fps", 16)
+    if "131" in prompt:
+        prompt["131"]["inputs"]["frame_rate"] = fps
+        logger.info(f"Frame rate set to: {fps}")
+
     prompt["244"]["inputs"]["image"] = image_path
     prompt["541"]["inputs"]["num_frames"] = length
     prompt["135"]["inputs"]["positive_prompt"] = job_input["prompt"]
