@@ -266,8 +266,7 @@ def handler(job):
     # step 설정 적용
     if "834" in prompt:
         prompt["834"]["inputs"]["steps"] = steps
-        
-    logger.info(f"Steps set to: {steps}")
+        logger.info(f"Steps set to: {steps}")
         lowsteps = int(steps*0.6)
         prompt["829"]["inputs"]["step"] = lowsteps
         logger.info(f"LowSteps set to: {lowsteps}")
