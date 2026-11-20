@@ -228,7 +228,7 @@ def handler(job):
     prompt = load_workflow(workflow_file)
     
     length = job_input.get("length", 81)
-    steps = job_input.get("steps", 10)
+    steps = job_input.get("steps", 8)
 
         # フレームレート設定 - 動画保存ノード(131: VHS_VideoCombine)のframe_rateへ適用
     fps = job_input.get("fps", 16)
@@ -236,6 +236,12 @@ def handler(job):
         prompt["131"]["inputs"]["frame_rate"] = fps
         logger.info(f"Frame rate set to: {fps}")
 
+    # ステップ数設定 - 総ステップ数(569)とHIGH/LOW境界(575)を適用
+    if "569" in prompt:
+        prompt["569"]["inputs"]["value"] = steps
+        if "575" in prompt:
+            prompt["575"]["inputs"]["value"] = steps // 2
+            logger.info(f"Steps set to: {steps} (split at {steps // 2})")
     prompt["244"]["inputs"]["image"] = image_path
     prompt["541"]["inputs"]["num_frames"] = length
     prompt["135"]["inputs"]["positive_prompt"] = job_input["prompt"]
@@ -260,7 +266,8 @@ def handler(job):
     # step 설정 적용
     if "834" in prompt:
         prompt["834"]["inputs"]["steps"] = steps
-        logger.info(f"Steps set to: {steps}")
+        
+    logger.info(f"Steps set to: {steps}")
         lowsteps = int(steps*0.6)
         prompt["829"]["inputs"]["step"] = lowsteps
         logger.info(f"LowSteps set to: {lowsteps}")
